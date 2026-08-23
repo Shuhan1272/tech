@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter
 
 
 urlpatterns = [
@@ -15,6 +16,7 @@ urlpatterns = [
     path('api/v1/reviews/', include('reviews.urls')),
     path('api/v1/wishlist/', include('wishlist.urls')),
     path('api/v1/coupons/', include('coupons.urls')),
+    path('api/v1/core/', include('core.urls')),
 ]
 
 if settings.DEBUG:

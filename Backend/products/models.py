@@ -48,6 +48,10 @@ class Category(TimeStampedModel):
         unique=True
     )
 
+    description = models.TextField(
+        blank=True 
+    )
+
     image = models.ImageField(
         upload_to='categories/', 
         blank=True, 
@@ -89,15 +93,25 @@ class Category(TimeStampedModel):
 class Brand(TimeStampedModel):
 
 
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.CASCADE,
-        related_name='brands'
+    categories = models.ManyToManyField(
+            Category,
+            related_name='brands',
+            blank=True
     )
     
     name = models.CharField(
         max_length=100,
         unique=True
+    )
+
+    description = models.TextField(
+        blank=True 
+    )
+
+    image = models.ImageField(
+            upload_to='brands/', 
+            blank=True, 
+            default='brands/default.jpg'
     )
 
     slug = models.SlugField(
@@ -199,6 +213,12 @@ class Product(TimeStampedModel):
 
 class VariantOption(TimeStampedModel):
 
+    categories = models.ManyToManyField(
+            Category,
+            related_name='options', 
+            blank=True 
+    )
+
     name = models.CharField(
         max_length=100,
         unique=True
@@ -236,28 +256,20 @@ class VariantOption(TimeStampedModel):
 
 class VariantOptionValue(TimeStampedModel):
 
-    option = models.ForeignKey(
+    options = models.ManyToManyField(
         VariantOption,
-        on_delete=models.CASCADE,
-        related_name='values'
+        related_name='option_values', 
+        blank=True 
     )
 
     value = models.CharField(
         max_length=100
     )
 
-    class Meta:
-
-        constraints = [
-            models.UniqueConstraint(
-                fields=['option', 'value'],
-                name='unique_option_value'
-            )
-        ]
 
     def __str__(self):
 
-        return f'{self.option.name}: {self.value}'
+        return f'{self.value}'
 
 
 # =========================================================
@@ -382,7 +394,8 @@ class ProductImage(TimeStampedModel):
     )
 
     image = models.ImageField(
-        upload_to='products/'
+        upload_to='products/', 
+        default='products/default.jpg'
     )
 
     alt_text = models.CharField(

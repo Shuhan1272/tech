@@ -3,7 +3,6 @@ BACKEND
 
 git switch main
 git pull origin main
-git switch your_name
 cd Backend
 cd venv\scripts
 activate

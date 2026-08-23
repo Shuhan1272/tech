@@ -19,7 +19,6 @@ from .models import (
 
 class BrandSerializer(serializers.ModelSerializer):
 
-    category = serializers.StringRelatedField()
 
     class Meta:
 
@@ -28,7 +27,7 @@ class BrandSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'name',
-            'category', 
+            'description',  
             'slug',
             'is_active',
             'created_at',
@@ -61,9 +60,10 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'name',
+            'description', 
             'slug',
             'image',
-            'brands',
+            'brands', 
             'subcategories',
             'is_active',
             'is_featured',
@@ -96,30 +96,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 
-# =========================================================
-# Variant Option
-# =========================================================
 
-class VariantOptionSerializer(
-    serializers.ModelSerializer
-):
-
-    class Meta:
-
-        model = VariantOption
-
-        fields = [
-            'id',
-            'name',
-            'created_at',
-            'updated_at',
-        ]
-
-        read_only_fields = [
-            'id',
-            'created_at',
-            'updated_at',
-        ]
 
 
 # =========================================================
@@ -136,7 +113,6 @@ class VariantOptionValueSerializer(
 
         fields = [
             'id',
-            'option',
             'value',
             'created_at',
             'updated_at',
@@ -147,6 +123,40 @@ class VariantOptionValueSerializer(
             'created_at',
             'updated_at',
         ]
+
+
+# =========================================================
+# Variant Option
+# =========================================================
+
+class VariantOptionSerializer(
+    serializers.ModelSerializer
+):
+    option_values = VariantOptionValueSerializer(
+        many=True,
+        read_only=True 
+    )
+
+    class Meta:
+
+        model = VariantOption
+
+        fields = [
+            'id',
+            'name',
+            'option_values', 
+            'created_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'option_values'
+            'created_at',
+            'updated_at',
+        ]
+
+
 
 
 # =========================================================
@@ -199,8 +209,6 @@ class ProductVariantSerializer(
         read_only=True
     )
 
-    discounted_price = serializers.ReadOnlyField()
-
     class Meta:
 
         model = ProductVariant
@@ -213,6 +221,7 @@ class ProductVariantSerializer(
             'price',
             'discount_percentage',
             'discounted_price',
+            'saved_price', 
             'stock',
             'is_default',
             'is_active',
@@ -225,6 +234,7 @@ class ProductVariantSerializer(
             'id',
             'sku',
             'discounted_price',
+            'price', 
             'images',
             'created_at',
             'updated_at',
@@ -302,118 +312,37 @@ class ProductVariantSerializer(
 # Product List Serializer
 # =========================================================
 
-class ProductListSerializer(
-    serializers.ModelSerializer
-):
-
+class ProductListSerializer(serializers.ModelSerializer):
     brand = serializers.StringRelatedField()
-
     category = serializers.StringRelatedField()
-
-    old_price = serializers.SerializerMethodField()
-
-    new_price = serializers.SerializerMethodField()
-
-    saved_price = serializers.SerializerMethodField()
-
-    discount_percentage = serializers.SerializerMethodField()
-
-    image = serializers.SerializerMethodField()
+    default_variant = serializers.SerializerMethodField()
 
     class Meta:
-
         model = Product
-
         fields = [
-            'id',
-            'name',
-            'slug',
-            'category', #needed for filtering. 
-            'brand', #needed for filtering. 
-            'key_feature', 
-            'old_price',
-            'new_price', 
-            'saved_price', 
-            'discount_percentage', 
-            'image',
-            'is_active',
-            'is_featured',
+            'id', 'name', 'slug', 'category', 'brand', 
+            'key_feature', 'is_active', 'is_featured',
+            'default_variant',
         ]
 
     def get_default_variant(self, obj):
-
-        return obj.variants.filter(
-            is_active=True
-        ).order_by(
-            '-is_default',
-            'price'
-        ).first()
-
-    def get_old_price(self, obj):
-
-        variant = self.get_default_variant(obj)
-
-        if not variant:
-            return None
-
-        return variant.price
-    
-    def get_new_price(self, obj):
-    
-        variant = self.get_default_variant(obj)
-
-        if not variant:
-            return None
-
-        return variant.discounted_price
-    
-    def get_saved_price(self, obj):
-
-        variant = self.get_default_variant(obj)
-
-        if not variant:
-            return None
-
-        return variant.saved_price
-    
-    def get_discount_percentage(self, obj):
-        variant = self.get_default_variant(obj)
-
-        if not variant:
-            return None
+        # obj.variants.all() is instant because of prefetch_related in the ViewSet
+        variants = obj.variants.all()
         
-        return variant.discount_percentage
-
-    def get_image(self, obj):
-
-        variant = self.get_default_variant(obj)
-
-        if not variant:
+        if not variants:
             return None
 
-        image = variant.images.filter(
-            is_primary=True
-        ).first()
-
-        if not image:
-
-            image = variant.images.order_by(
-                'display_order'
-            ).first()
-
-        if not image:
-            return None
-
-        request = self.context.get(
-            'request'
-        )
-
-        if request:
-            return request.build_absolute_uri(
-                image.image.url
-            )
-
-        return image.image.url
+        # 1. Try to find the active, default variant
+        for variant in variants:
+            if variant.is_active and variant.is_default:
+                return ProductVariantSerializer(variant, context=self.context).data
+        
+        # 2. Fallback: Just return the first active one if no default exists
+        for variant in variants:
+            if variant.is_active:
+                return ProductVariantSerializer(variant, context=self.context).data
+                
+        return None
 
 
 # =========================================================

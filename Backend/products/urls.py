@@ -71,5 +71,4 @@ router.register(
     basename='product-review'
 )
 
-
 urlpatterns = router.urls

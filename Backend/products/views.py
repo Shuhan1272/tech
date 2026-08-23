@@ -7,6 +7,9 @@ from rest_framework.permissions import (
     IsAuthenticated
 )
 
+from decimal import Decimal
+from django.db.models import Min, Q, F, ExpressionWrapper, fields
+
 from .permissions import IsAdminOrReadOnly
 
 from .models import (
@@ -34,7 +37,7 @@ from .serializers import (
     ProductReviewSerializer,
 )
 
-from .filters import ProductVariantFilter,ProductFilter,CategoryFilter,BrandFilter
+from .filters import ProductVariantFilter,ProductFilter,CategoryFilter,BrandFilter, VariantOptionFilter
 from .pagination import ProductPagination
 
 
@@ -44,7 +47,7 @@ from .pagination import ProductPagination
 
 class CategoryViewSet(viewsets.ModelViewSet):
 
-    queryset = Category.objects.all()
+    queryset = Category.objects.prefetch_related("brands"); 
 
     serializer_class = CategorySerializer
 
@@ -69,7 +72,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class BrandViewSet(viewsets.ModelViewSet):
 
-    queryset = Brand.objects.all()
+    queryset = Brand.objects.prefetch_related('categories')
 
     serializer_class = BrandSerializer
 
@@ -92,7 +95,15 @@ class BrandViewSet(viewsets.ModelViewSet):
 
 class ProductViewSet(viewsets.ModelViewSet):
 
-    queryset = Product.objects.all()
+    queryset = Product.objects.select_related('brand', 'category').prefetch_related('variants').annotate(
+        price=Min(
+            ExpressionWrapper(
+                F('variants__price') - (F('variants__price') * F('variants__discount_percentage') / Decimal('100.0')),
+                output_field=fields.DecimalField()
+            ),
+            filter=Q(variants__is_active=True)
+        ) 
+    ) #adding temporary price column #due to relationship and property in model. 
 
     permission_classes = [
         IsAdminOrReadOnly
@@ -116,6 +127,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     ordering_fields = [
         'name',
+        'price', 
         'created_at',
     ]
 
@@ -141,13 +153,21 @@ class VariantOptionViewSet(
     viewsets.ModelViewSet
 ):
 
-    queryset = VariantOption.objects.all()
+    queryset = VariantOption.objects.prefetch_related('option_values'); 
 
     serializer_class = VariantOptionSerializer
 
     permission_classes = [
         IsAdminOrReadOnly
     ]
+
+    filter_backends = [DjangoFilterBackend]
+
+    filterset_class = VariantOptionFilter
+
+
+
+
 
 
 # =========================================================

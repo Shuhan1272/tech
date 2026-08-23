@@ -7,24 +7,49 @@ import django_filters
 from .models import (
     Product, 
     Category, 
-    Brand
+    Brand, 
+    VariantOption
 
 )
 
 from django.db.models import Q
 
-class BrandFilter(
+class VariantOptionFilter(
     django_filters.FilterSet
 ):
 
-    category = django_filters.CharFilter(
-        method='filter_category'
+    categories = django_filters.CharFilter(
+        method='filter_categories'
     )
 
-    def filter_category(self, queryset, name, value):
+    def filter_categories(self, queryset, name, value):
 
         return queryset.filter(
-            Q(category__slug=value)
+            Q(categories__slug=value)
+    )
+
+    class Meta:
+    
+            model = VariantOption
+    
+            fields = [
+                'categories',
+            ]
+
+
+
+class BrandFilter(
+    django_filters.FilterSet
+):
+    #one brand can have many categories 
+    categories = django_filters.CharFilter(
+        method='filter_categories'
+    )
+
+    def filter_categories(self, queryset, name, value):
+
+        return queryset.filter(
+            Q(categories__slug=value)
     )
 
     class Meta:
@@ -32,7 +57,7 @@ class BrandFilter(
             model = Brand
     
             fields = [
-                'category',
+                'categories',
             ]
 
 class CategoryFilter(
