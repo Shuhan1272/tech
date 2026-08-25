@@ -63,6 +63,7 @@ class RegisterSerializer(
 
         return value
 
+
     def validate(self, data):
 
         if data['password'] != data['password2']:

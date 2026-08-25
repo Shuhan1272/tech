@@ -16,8 +16,6 @@ from .models import (
     Category,
     Brand,
     Product,
-    VariantOption,
-    VariantOptionValue,
     ProductVariant,
     ProductImage,
     ProductQuestion,
@@ -29,15 +27,13 @@ from .serializers import (
     BrandSerializer,
     ProductSerializer,
     ProductListSerializer,
-    VariantOptionSerializer,
-    VariantOptionValueSerializer,
     ProductVariantSerializer,
     ProductImageSerializer,
     ProductQuestionSerializer,
     ProductReviewSerializer,
 )
 
-from .filters import ProductVariantFilter,ProductFilter,CategoryFilter,BrandFilter, VariantOptionFilter
+from .filters import ProductFilter,CategoryFilter,BrandFilter
 from .pagination import ProductPagination
 
 
@@ -47,7 +43,7 @@ from .pagination import ProductPagination
 
 class CategoryViewSet(viewsets.ModelViewSet):
 
-    queryset = Category.objects.prefetch_related("brands"); 
+    queryset = Category.objects.prefetch_related("brands").filter(parent=None)
 
     serializer_class = CategorySerializer
 
@@ -146,48 +142,6 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 
 # =========================================================
-# Variant Option
-# =========================================================
-
-class VariantOptionViewSet(
-    viewsets.ModelViewSet
-):
-
-    queryset = VariantOption.objects.prefetch_related('option_values'); 
-
-    serializer_class = VariantOptionSerializer
-
-    permission_classes = [
-        IsAdminOrReadOnly
-    ]
-
-    filter_backends = [DjangoFilterBackend]
-
-    filterset_class = VariantOptionFilter
-
-
-
-
-
-
-# =========================================================
-# Variant Option Value
-# =========================================================
-
-class VariantOptionValueViewSet(
-    viewsets.ModelViewSet
-):
-
-    queryset = VariantOptionValue.objects.all()
-
-    serializer_class = VariantOptionValueSerializer
-
-    permission_classes = [
-        IsAdminOrReadOnly
-    ]
-
-
-# =========================================================
 # Product Variant
 # =========================================================
 
@@ -205,26 +159,6 @@ class ProductVariantViewSet(
 
     pagination_class = ProductPagination
 
-    filter_backends = [
-        DjangoFilterBackend
-    ]
-
-    filterset_class = ProductVariantFilter
-
-    search_fields = [
-        'sku',
-        'product__name',
-    ]
-
-    ordering_fields = [
-        'price',
-        'stock',
-        'created_at',
-    ]
-
-    ordering = [
-        '-created_at'
-    ]
 
 
 # =========================================================
@@ -235,7 +169,7 @@ class ProductImageViewSet(
     viewsets.ModelViewSet
 ):
 
-    queryset = ProductImage.objects.all()
+    queryset = ProductImage.objects.select_related('product')
 
     serializer_class = ProductImageSerializer
 

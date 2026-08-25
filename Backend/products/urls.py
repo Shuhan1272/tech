@@ -5,8 +5,6 @@ from .views import (
     BrandViewSet,
     ProductViewSet,
     ProductVariantViewSet,
-    VariantOptionViewSet,
-    VariantOptionValueViewSet,
     ProductImageViewSet,
     ProductQuestionViewSet,
     ProductReviewViewSet,
@@ -39,18 +37,6 @@ router.register(
     'variants',
     ProductVariantViewSet,
     basename='product-variant'
-)
-
-router.register(
-    'variant-options',
-    VariantOptionViewSet,
-    basename='variant-option'
-)
-
-router.register(
-    'variant-option-values',
-    VariantOptionValueViewSet,
-    basename='variant-option-value'
 )
 
 router.register(

@@ -40,13 +40,15 @@ class Category(TimeStampedModel):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='subcategories'
+        related_name='sub_categories'
     )
 
     name = models.CharField(
         max_length=100,
         unique=True
     )
+
+    filters = models.JSONField(default=dict, blank=True)
 
     description = models.TextField(
         blank=True 
@@ -144,6 +146,14 @@ class Brand(TimeStampedModel):
 
 class Product(TimeStampedModel):
 
+
+    class Availability(models.TextChoices):
+        IN_STOCK = "in_stock", "In Stock"
+        OUT_OF_STOCK = "out_of_stock", "Out of Stock"
+        COMING_SOON = "coming_soon", "Coming Soon"
+        PRE_ORDER = "pre_order", "Pre Order"
+
+
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
@@ -155,6 +165,13 @@ class Product(TimeStampedModel):
         on_delete=models.PROTECT,
         related_name='products'
     )
+
+    availability = models.CharField(
+        max_length=20,
+        choices=Availability.choices,
+        default=Availability.IN_STOCK
+    )
+
 
     name = models.CharField(
         max_length=200,
@@ -181,6 +198,15 @@ class Product(TimeStampedModel):
         blank=True
     )
 
+    def default_color():
+        return ["Black", "White"]
+        
+    colors = models.JSONField(
+        default=default_color,  
+        blank=True
+    )
+
+
     is_active = models.BooleanField(
         default=True
     )
@@ -202,77 +228,6 @@ class Product(TimeStampedModel):
 
 
 # =========================================================
-# Variant Option
-#
-# Examples:
-# Storage
-# RAM
-# Color
-# ROM
-# =========================================================
-
-class VariantOption(TimeStampedModel):
-
-    categories = models.ManyToManyField(
-            Category,
-            related_name='options', 
-            blank=True 
-    )
-
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-
-    slug = models.SlugField(
-        max_length=120,
-        unique=True,
-        blank=True
-    )
-
-    def save(self, *args, **kwargs):
-
-        if not self.slug:
-            self.slug = slugify(self.name)
-
-        return super().save(*args, **kwargs)
-
-    def __str__(self):
-
-        return self.name
-
-
-# =========================================================
-# Variant Option Value
-#
-# Examples:
-# 128GB
-# 256GB
-# Black
-# Blue
-# 8GB
-# 16GB
-# =========================================================
-
-class VariantOptionValue(TimeStampedModel):
-
-    options = models.ManyToManyField(
-        VariantOption,
-        related_name='option_values', 
-        blank=True 
-    )
-
-    value = models.CharField(
-        max_length=100
-    )
-
-
-    def __str__(self):
-
-        return f'{self.value}'
-
-
-# =========================================================
 # Product Variant
 # =========================================================
 
@@ -284,17 +239,24 @@ class ProductVariant(TimeStampedModel):
         related_name='variants'
     )
 
+
     sku = models.CharField(
         max_length=100,
         unique=True,
         blank=True
     )
 
-    options = models.ManyToManyField(
-        VariantOptionValue,
-        related_name='product_variants',
+    def default_options():
+        return {
+            "RAM": "",
+            "Storage": ""
+        }
+
+    options = models.JSONField(
+        default=default_options,
         blank=True
     )
+
 
     price = models.DecimalField(
         max_digits=12,
@@ -351,8 +313,7 @@ class ProductVariant(TimeStampedModel):
         if not self.sku:
 
             self.sku = (
-                f"{self.product_id}-"
-                f"{uuid.uuid4().hex[:8].upper()}"
+                f"{self.product.slug}-{self.options.get('RAM',' ')}-{self.options.get('Storage',' ')}"
             )
 
         # First variant becomes default
@@ -387,8 +348,8 @@ class ProductVariant(TimeStampedModel):
 
 class ProductImage(TimeStampedModel):
 
-    variant = models.ForeignKey(
-        ProductVariant,
+    product = models.ForeignKey(
+        Product,
         on_delete=models.CASCADE,
         related_name='images'
     )
@@ -413,42 +374,19 @@ class ProductImage(TimeStampedModel):
 
     def save(self, *args, **kwargs):
 
-        # First image becomes primary
-        if not ProductImage.objects.filter(
-            variant=self.variant
-        ).exclude(
-            pk=self.pk
-        ).exists():
-
-            self.is_primary = True
-
-        # If this image is primary,
-        # make all other images non-primary
-        if self.is_primary:
-
-            ProductImage.objects.filter(
-                variant=self.variant,
-                is_primary=True
-            ).exclude(
-                pk=self.pk
-            ).update(
-                is_primary=False
-            )
-
         if not self.alt_text:
 
             self.alt_text = (
-                f'{self.variant.product.name} '
-                f'{self.variant.sku} product image'
+                f'{self.product.name} product image'
             )
 
         return super().save(*args, **kwargs)
+    
 
     def __str__(self):
 
         return (
-            f'{self.variant.product.name} '
-            f'- {self.variant.sku} image'
+            f'{self.product.name} image'
         )
 
 

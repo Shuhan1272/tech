@@ -8,33 +8,11 @@ from .models import (
     Product, 
     Category, 
     Brand, 
-    VariantOption
 
 )
 
 from django.db.models import Q
 
-class VariantOptionFilter(
-    django_filters.FilterSet
-):
-
-    categories = django_filters.CharFilter(
-        method='filter_categories'
-    )
-
-    def filter_categories(self, queryset, name, value):
-
-        return queryset.filter(
-            Q(categories__slug=value)
-    )
-
-    class Meta:
-    
-            model = VariantOption
-    
-            fields = [
-                'categories',
-            ]
 
 
 
@@ -81,22 +59,19 @@ class CategoryFilter(
             fields = [
                 'parent',
             ]
-    
 
 
-class ProductFilter(
-    django_filters.FilterSet
-):
+
+class ProductFilter(django_filters.FilterSet):
 
     category = django_filters.CharFilter(
-        method='filter_category'
+    method='filter_category'
     )
 
     def filter_category(self, queryset, name, value):
-
         return queryset.filter(
-            Q(category__slug=value) |
-            Q(category__parent__slug=value) #maintained two level of category
+        Q(category__slug=value) |
+        Q(category__parent__slug=value)
     )
 
     brand = django_filters.CharFilter(
@@ -112,93 +87,58 @@ class ProductFilter(
         field_name='is_featured'
     )
 
-    class Meta:
+    def filter_queryset(self, queryset):
 
-        model = Product
+        # First apply declared filters
+        queryset = super().filter_queryset(queryset)
 
-        fields = [
+        # Existing query parameters
+        params = self.data
+
+        # These are NOT keyFeatures
+        reserved_params = {
             'category',
             'brand',
             'is_active',
             'is_featured',
-        ]
+            'ordering',
+            'search',
+            'page',
+            'page_size',
+            'limit'
+        }
 
+        # Dynamic keyFeatures filters
+        for key in params.keys():
 
-class ProductVariantFilter(
-    django_filters.FilterSet
-):
+            if key in reserved_params:
+                continue
 
-    min_price = django_filters.NumberFilter(
-        field_name='price',
-        lookup_expr='gte'
-    )
+            values = params.getlist(key)
 
-    max_price = django_filters.NumberFilter(
-        field_name='price',
-        lookup_expr='lte'
-    )
+            if not values:
+                continue
 
-    in_stock = django_filters.BooleanFilter(
-        method='filter_in_stock'
-    )
+            # Multiple values for the same key = OR
+            value_query = Q()
 
-    # -----------------------------------------
-    # Filter by option value
-    # Example:
-    # ?option=2
-    #
-    # 2 could mean "256 GB"
-    # -----------------------------------------
+            for value in values:
+                value_query |= Q(
+                    **{
+                        f'specification__{key}__iexact': value
+                    }
+                )
 
-    
+            queryset = queryset.filter(value_query)
 
-    def filter_in_stock(
-        self,
-        queryset,
-        name,
-        value
-    ):
-
-        if value:
-
-            return queryset.filter(
-                stock__gt=0
-            )
-
-        return queryset.filter(
-            stock=0
-        )
-
-    option = django_filters.CharFilter(
-            method='filter_options'
-    )
-
-    def filter_options(
-    self,
-    queryset,
-    name,
-    value
-    ):
-
-        option_ids = value.split(',')
-
-        for option_id in option_ids:
-
-            queryset = queryset.filter(
-                options__id=option_id
-            )
-
-        return queryset.distinct()
+        return queryset
 
     class Meta:
-
-        model = ProductVariant
-
+        model = Product
         fields = [
-            'product',
-            'is_active',
-            'min_price',
-            'max_price',
-            'in_stock',
-            'option',
+        'category',
+        'brand',
+        'is_active',
+        'is_featured',
         ]
+

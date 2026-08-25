@@ -4,8 +4,6 @@ from .models import (
     Category,
     Brand,
     Product,
-    VariantOption,
-    VariantOptionValue,
     ProductVariant,
     ProductImage,
     ProductQuestion,
@@ -52,7 +50,7 @@ class CategorySerializer(serializers.ModelSerializer):
         many=True,
         read_only=True 
     )
-    subcategories = serializers.SerializerMethodField()
+    sub_categories = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
@@ -61,10 +59,11 @@ class CategorySerializer(serializers.ModelSerializer):
             'id',
             'name',
             'description', 
+            'filters', 
             'slug',
             'image',
             'brands', 
-            'subcategories',
+            'sub_categories',
             'is_active',
             'is_featured',
             'created_at',
@@ -75,88 +74,22 @@ class CategorySerializer(serializers.ModelSerializer):
             'id',
             'slug',
             'brands',
-            'subcategories',
+            'sub_categories',
             'created_at',
             'updated_at',
         ]
 
-    def get_subcategories(self, obj):
+    def get_sub_categories(self, obj):
 
-        subcategories = Category.objects.filter(
+        sub_categories = Category.objects.filter(
             parent=obj,
             is_active=True
         )
 
         return CategorySerializer(
-            subcategories,
+            sub_categories,
             many=True
         ).data
-    
-    
-
-
-
-
-
-
-# =========================================================
-# Variant Option Value
-# =========================================================
-
-class VariantOptionValueSerializer(
-    serializers.ModelSerializer
-):
-
-    class Meta:
-
-        model = VariantOptionValue
-
-        fields = [
-            'id',
-            'value',
-            'created_at',
-            'updated_at',
-        ]
-
-        read_only_fields = [
-            'id',
-            'created_at',
-            'updated_at',
-        ]
-
-
-# =========================================================
-# Variant Option
-# =========================================================
-
-class VariantOptionSerializer(
-    serializers.ModelSerializer
-):
-    option_values = VariantOptionValueSerializer(
-        many=True,
-        read_only=True 
-    )
-
-    class Meta:
-
-        model = VariantOption
-
-        fields = [
-            'id',
-            'name',
-            'option_values', 
-            'created_at',
-            'updated_at',
-        ]
-
-        read_only_fields = [
-            'id',
-            'option_values'
-            'created_at',
-            'updated_at',
-        ]
-
-
 
 
 # =========================================================
@@ -173,7 +106,6 @@ class ProductImageSerializer(
 
         fields = [
             'id',
-            'variant',
             'image',
             'alt_text',
             'is_primary',
@@ -198,16 +130,6 @@ class ProductVariantSerializer(
     serializers.ModelSerializer
 ):
 
-    options = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=VariantOptionValue.objects.all(),
-        required=False
-    )
-
-    images = ProductImageSerializer(
-        many=True,
-        read_only=True
-    )
 
     class Meta:
 
@@ -225,7 +147,6 @@ class ProductVariantSerializer(
             'stock',
             'is_default',
             'is_active',
-            'images',
             'created_at',
             'updated_at',
         ]
@@ -235,7 +156,6 @@ class ProductVariantSerializer(
             'sku',
             'discounted_price',
             'price', 
-            'images',
             'created_at',
             'updated_at',
         ]
@@ -260,52 +180,6 @@ class ProductVariantSerializer(
 
         return value
 
-    def validate(self, data):
-
-        options = data.get(
-            'options',
-            []
-        )
-
-        option_ids = [
-            option_value.option_id
-            for option_value in options
-        ]
-
-        if len(option_ids) != len(
-            set(option_ids)
-        ):
-
-            raise serializers.ValidationError({
-                'options':
-                    'A variant cannot have multiple '
-                    'values from the same option.'
-            })
-
-        return data
-
-    def to_representation(
-        self,
-        instance
-    ):
-
-        data = super().to_representation(
-            instance
-        )
-
-        data['options'] = [
-            {
-                'id': option_value.id,
-                'option': option_value.option.name,
-                'value': option_value.value,
-            }
-            for option_value
-            in instance.options.select_related(
-                'option'
-            ).all()
-        ]
-
-        return data
 
 
 # =========================================================
@@ -321,7 +195,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'slug', 'category', 'brand', 
-            'key_feature', 'is_active', 'is_featured',
+            'key_feature','specification','colors','is_active', 'is_featured',
             'default_variant',
         ]
 

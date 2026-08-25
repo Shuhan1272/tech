@@ -5,154 +5,251 @@ from .models import (
     Category,
     Brand,
     Product,
-    VariantOption,
-    VariantOptionValue,
     ProductVariant,
     ProductImage,
     ProductQuestion,
     ProductReview,
-
 )
 
 
-admin.site.register(VariantOption)
-admin.site.register(VariantOptionValue)
-admin.site.register(ProductQuestion)
-admin.site.register(ProductReview)
+# =========================================================
+# CATEGORY
+# =========================================================
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    search_fields = ['name','parent__name']
+    list_display = (
+        "name",
+        "parent",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "is_active",
+    )
+
+    search_fields = (
+        "name",
+    )
+
+    prepopulated_fields = {
+        "slug": ("name",)
+    }
+
+
+# =========================================================
+# BRAND
+# =========================================================
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
-    search_fields = ['name','category__name','category__parent__name']
+    list_display = (
+        "name",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "is_active",
+    )
+
+    search_fields = (
+        "name",
+    )
+
+    prepopulated_fields = {
+        "slug": ("name",)
+    }
 
 
-@admin.register(ProductImage)
-class ProductImageAdmin(admin.ModelAdmin):
-
-    list_display = [
-        'id',
-        'variant',
-        'is_primary',
-        'display_order',
-        'created_at',
-    ]
-
-    list_filter = [
-        'is_primary',
-    ]
-
-    ordering = [
-        'variant',
-        'display_order',
-    ]
-
+# =========================================================
+# PRODUCT IMAGE INLINE
+# =========================================================
 
 class ProductImageInline(admin.TabularInline):
-
     model = ProductImage
-
     extra = 1
 
-    fields = [
-        'image',
-        'alt_text',
-        'is_primary',
-        'display_order',
-    ]
+    fields = (
+        "image",
+        "image_preview",
+        "is_primary",
+    )
 
-    readonly_fields = [
-        'alt_text',
-    ]
+    readonly_fields = (
+        "image_preview",
+    )
+
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="80" height="80" '
+                'style="object-fit: cover; border-radius: 6px;" />',
+                obj.image.url
+            )
+
+        return "No image"
+
+    image_preview.short_description = "Preview"
 
 
-@admin.register(ProductVariant)
-class ProductVariantAdmin(admin.ModelAdmin):
+# =========================================================
+# PRODUCT VARIANT INLINE
+# =========================================================
 
-    list_display = [
-        'product',
-        'sku',
-        'price',
-        'discount_percentage',
-        'stock',
-        'is_default',
-        'is_active',
-    ]
+class ProductVariantInline(admin.TabularInline):
+    model = ProductVariant
+    extra = 1
 
-    list_filter = [
-        'is_active',
-        'is_default',
-    ]
+    fields = (
+        "options",
+        "price",
+        "stock",
+        "is_active",
+    )
 
-    search_fields = [
-        'product__name',
-        'sku',
-    ]
 
-    filter_horizontal = [
-        'options',
-    ]
-
-    inlines = [
-        ProductImageInline,
-    ]
+# =========================================================
+# PRODUCT
+# =========================================================
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "brand",
+        "category",
+        "is_active",
+        "created_at",
+    )
 
-    autocomplete_fields = ['category', 'brand']
+    list_filter = (
+        "is_active",
+        "brand",
+        "category",
+    )
 
-    list_display = [
-        'name',
-        'category',
-        'brand',
-        'default_price',
-        'default_image',
-        'is_active',
-        'is_featured',
-    ]
+    search_fields = (
+        "name",
+        "brand__name",
+        "category__name",
+    )
 
-    readonly_fields = [
-        'slug',
-        'default_price',
-        'default_image',
-    ]
+    prepopulated_fields = {
+        "slug": ("name",)
+    }
 
-    @admin.display(description='Default Price')
-    def default_price(self, obj):
+    inlines = (
+        ProductImageInline,
+        ProductVariantInline,
+    )
 
-        variant = obj.variants.filter(
-            is_default=True,
-            is_active=True
-        ).first()
 
-        if variant:
-            return variant.discounted_price
+# =========================================================
+# PRODUCT IMAGE
+# =========================================================
 
-        return '-'
+@admin.register(ProductImage)
+class ProductImageAdmin(admin.ModelAdmin):
+    list_display = (
+        "product",
+        "image_preview",
+        "is_primary",
+    )
 
-    @admin.display(description='Default Image')
-    def default_image(self, obj):
+    list_filter = (
+        "is_primary",
+    )
 
-        variant = obj.variants.filter(
-            is_default=True,
-            is_active=True
-        ).first()
+    search_fields = (
+        "product__name",
+    )
 
-        if not variant:
-            return '-'
+    readonly_fields = (
+        "image_preview",
+    )
 
-        image = variant.images.filter(
-            is_primary=True
-        ).first()
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="80" height="80" '
+                'style="object-fit: cover; border-radius: 6px;" />',
+                obj.image.url
+            )
 
-        if not image:
-            return '-'
+        return "No image"
 
-        return format_html(
-            '<img src="{}" width="100" height="100" '
-            'style="object-fit:contain;" />',
-            image.image.url
-        )
+    image_preview.short_description = "Preview"
+
+
+# =========================================================
+# PRODUCT VARIANT
+# =========================================================
+
+@admin.register(ProductVariant)
+class ProductVariantAdmin(admin.ModelAdmin):
+    list_display = (
+        "product",
+        "price",
+        "stock",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "is_active",
+    )
+
+    search_fields = (
+        "product__name",
+        "sku",
+    )
+
+
+# =========================================================
+# PRODUCT QUESTION
+# =========================================================
+
+@admin.register(ProductQuestion)
+class ProductQuestionAdmin(admin.ModelAdmin):
+    list_display = (
+        "product",
+        "user",
+        "created_at",
+    )
+
+    search_fields = (
+        "product__name",
+        "user__email",
+        "question",
+    )
+
+    list_filter = (
+        "created_at",
+    )
+
+
+# =========================================================
+# PRODUCT REVIEW
+# =========================================================
+
+@admin.register(ProductReview)
+class ProductReviewAdmin(admin.ModelAdmin):
+    list_display = (
+        "product",
+        "user",
+        "rating",
+        "created_at",
+    )
+
+    list_filter = (
+        "rating",
+        "created_at",
+    )
+
+    search_fields = (
+        "product__name",
+        "user__email",
+        "comment",
+    )
