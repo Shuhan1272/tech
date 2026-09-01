@@ -34,11 +34,11 @@ export default function Navbar() {
                         className="font-black text-2xl"
                     >
                         <span className="text-orange-500">
-                            STAR
+                            TECH
                         </span>
 
                         <span className="text-blue-400">
-                            TECH
+                            NEST
                         </span>
                     </Link>
 
