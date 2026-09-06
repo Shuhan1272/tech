@@ -5,10 +5,9 @@ git switch main
 git pull origin main
 cd Backend
 cd venv\scripts
-activate
+.\activate
 cd..
 cd..
-
 python manage.py runserver
 
 
