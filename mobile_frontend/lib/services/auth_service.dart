@@ -5,7 +5,7 @@ class AuthService {
   // ⚠️ CHANGE THIS TO YOUR BACKEND URL
   // If using Android Emulator: http://10.0.2.2:8000/api/
   // If using Chrome (web): http://127.0.0.1:8000/api/
-  static const String baseUrl = "http://127.0.0.1:8000/api/v1/accounts/";
+  static const String baseUrl = "http://10.0.2.2:8000/api/v1/accounts/";
 
   // =========================================================
   // REGISTER
@@ -34,7 +34,14 @@ class AuthService {
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Registration failed');
+      try {
+        final errorBody = jsonDecode(response.body);
+        // Handles 'detail', 'non_field_errors', or raw field errors from Django
+        final errorMessage = errorBody['detail'] ?? errorBody['non_field_errors'] ?? errorBody;
+        throw Exception(errorMessage.toString());
+      } catch (e) {
+        throw Exception('Registration failed: ${response.body}');
+      }
     }
   }
 
