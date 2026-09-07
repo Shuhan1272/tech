@@ -34,7 +34,14 @@ class AuthService {
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(jsonDecode(response.body)['detail'] ?? 'Registration failed');
+      try {
+        final errorBody = jsonDecode(response.body);
+        // Handles 'detail', 'non_field_errors', or raw field errors from Django
+        final errorMessage = errorBody['detail'] ?? errorBody['non_field_errors'] ?? errorBody;
+        throw Exception(errorMessage.toString());
+      } catch (e) {
+        throw Exception('Registration failed: ${response.body}');
+      }
     }
   }
 
