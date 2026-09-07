@@ -163,7 +163,9 @@ class Product(TimeStampedModel):
     brand = models.ForeignKey(
         Brand,
         on_delete=models.PROTECT,
-        related_name='products'
+        related_name='products', 
+        blank=True,
+        null=True
     )
 
     availability = models.CharField(
