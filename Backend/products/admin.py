@@ -105,6 +105,7 @@ class ProductVariantInline(admin.TabularInline):
     fields = (
         "options",
         "price",
+        "discount_percentage", 
         "stock",
         "is_active",
     )
