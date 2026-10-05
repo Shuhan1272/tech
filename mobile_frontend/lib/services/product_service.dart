@@ -1,16 +1,16 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
+import '../core/api_client.dart';
 import '../models/product.dart';
 import '../models/category.dart';
-import '../services/token_storage.dart';
 
+/// Rewritten on the shared ApiClient/Dio instance instead of raw `http`.
+/// This used to hardcode its own base URL (127.0.0.1, no version prefix)
+/// which was BOTH a different host and a different API path than
+/// auth_service.dart's (10.0.2.2, /api/v1/) — two services in one app
+/// pointing at two different addresses. They now share one base URL.
 class ProductService {
-  // ⚠️ CHANGE THIS BASED ON YOUR TESTING ENVIRONMENT
-  static const String baseUrl = "http://127.0.0.1:8000/api/";
+  static final Dio _dio = ApiClient.instance.dio;
 
-  // =========================================================
-  // GET ALL PRODUCTS (With Filters)
-  // =========================================================
   static Future<List<Product>> getProducts({
     String? category,
     String? brand,
@@ -21,97 +21,63 @@ class ProductService {
     int limit = 20,
     Map<String, String>? extraFilters,
   }) async {
-    final queryParams = <String, String>{};
-
+    final queryParams = <String, dynamic>{'page': page, 'limit': limit};
     if (category != null) queryParams['category'] = category;
     if (brand != null) queryParams['brand'] = brand;
     if (search != null) queryParams['search'] = search;
     if (ordering != null) queryParams['ordering'] = ordering;
-    if (isFeatured != null) queryParams['is_featured'] = isFeatured.toString();
+    if (isFeatured != null) queryParams['is_featured'] = isFeatured;
     if (extraFilters != null) queryParams.addAll(extraFilters);
 
-    queryParams['page'] = page.toString();
-    queryParams['limit'] = limit.toString();
-
-    final uri = Uri.parse('${baseUrl}products/').replace(queryParameters: queryParams);
-
-    final response = await http.get(uri);
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final results = data['results'] as List? ?? data as List;
-      return results.map((e) => Product.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load products: ${response.statusCode}');
+    try {
+      final response = await _dio.get('/products/', queryParameters: queryParams);
+      final data = response.data;
+      final List results = data is List ? data : (data['results'] as List? ?? []);
+      return results.map((e) => Product.fromJson(Map<String, dynamic>.from(e))).toList();
+    } on DioException catch (e) {
+      throw Exception(ApiClient.errorMessage(e));
     }
   }
 
-  // =========================================================
-  // GET PRODUCT BY SLUG (Detail)
-  // =========================================================
   static Future<Product> getProductBySlug(String slug) async {
-    final response = await http.get(
-      Uri.parse('${baseUrl}products/$slug/'),
-    );
-
-    if (response.statusCode == 200) {
-      return Product.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to load product: ${response.statusCode}');
+    try {
+      final response = await _dio.get('/products/$slug/');
+      return Product.fromJson(Map<String, dynamic>.from(response.data));
+    } on DioException catch (e) {
+      throw Exception(ApiClient.errorMessage(e));
     }
   }
 
-  // =========================================================
-  // GET FEATURED PRODUCTS
-  // =========================================================
-  static Future<List<Product>> getFeaturedProducts({int limit = 10}) async {
-    return getProducts(isFeatured: true, limit: limit);
-  }
+  static Future<List<Product>> getFeaturedProducts({int limit = 10}) =>
+      getProducts(isFeatured: true, limit: limit);
 
-  // =========================================================
-  // GET CATEGORIES
-  // =========================================================
   static Future<List<Category>> getCategories({bool? isFeatured}) async {
-    final queryParams = <String, String>{};
-    if (isFeatured != null) queryParams['is_featured'] = isFeatured.toString();
+    final queryParams = <String, dynamic>{};
+    if (isFeatured != null) queryParams['is_featured'] = isFeatured;
 
-    final uri = Uri.parse('${baseUrl}categories/').replace(queryParameters: queryParams);
-
-    final response = await http.get(uri);
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final results = data['results'] as List? ?? data as List;
-      return results.map((e) => Category.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load categories: ${response.statusCode}');
+    try {
+      final response = await _dio.get('/categories/', queryParameters: queryParams);
+      final data = response.data;
+      final List results = data is List ? data : (data['results'] as List? ?? []);
+      return results.map((e) => Category.fromJson(Map<String, dynamic>.from(e))).toList();
+    } on DioException catch (e) {
+      throw Exception(ApiClient.errorMessage(e));
     }
   }
 
-  // =========================================================
-  // GET BRANDS
-  // =========================================================
   static Future<List<Brand>> getBrands({String? category}) async {
-    final queryParams = <String, String>{};
+    final queryParams = <String, dynamic>{};
     if (category != null) queryParams['categories'] = category;
 
-    final uri = Uri.parse('${baseUrl}brands/').replace(queryParameters: queryParams);
-
-    final response = await http.get(uri);
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final results = data['results'] as List? ?? data as List;
-      return results.map((e) => Brand.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load brands: ${response.statusCode}');
+    try {
+      final response = await _dio.get('/brands/', queryParameters: queryParams);
+      final data = response.data;
+      final List results = data is List ? data : (data['results'] as List? ?? []);
+      return results.map((e) => Brand.fromJson(Map<String, dynamic>.from(e))).toList();
+    } on DioException catch (e) {
+      throw Exception(ApiClient.errorMessage(e));
     }
   }
 
-  // =========================================================
-  // SEARCH PRODUCTS
-  // =========================================================
-  static Future<List<Product>> searchProducts(String query) async {
-    return getProducts(search: query);
-  }
+  static Future<List<Product>> searchProducts(String query) => getProducts(search: query);
 }
