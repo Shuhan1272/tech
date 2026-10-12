@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/category.dart';
 import '../core/app_theme.dart';
 
@@ -6,6 +7,12 @@ import '../core/app_theme.dart';
 /// proper reusable widget — the same way CategoryChip already was. The
 /// two were doing near-identical layout work but one lived as a
 /// screen-private method for no real reason.
+///
+/// Updated: the tile used to always draw an emoji, even for real backend
+/// categories (which come with an `image` URL — this backend's
+/// Category.image defaults to categories/default.jpg). It now renders the
+/// API image when one exists and only falls back to the emoji placeholder
+/// for the handful of hardcoded categories.
 class CategoryGridItem extends StatelessWidget {
   final Category category;
   final VoidCallback onTap;
@@ -14,6 +21,9 @@ class CategoryGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = category.image;
+    final hasImage = imageUrl != null && imageUrl.trim().isNotEmpty;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -28,7 +38,19 @@ class CategoryGridItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.08), shape: BoxShape.circle),
-              child: Text(category.icon, style: const TextStyle(fontSize: 20)),
+              child: hasImage
+                  ? ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  width: 20,
+                  height: 20,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => const SizedBox(width: 20, height: 20),
+                  errorWidget: (context, url, error) =>
+                      Text(category.icon, style: const TextStyle(fontSize: 20)),
+                ),
+              )
+                  : Text(category.icon, style: const TextStyle(fontSize: 20)),
             ),
             const SizedBox(height: 6),
             Padding(

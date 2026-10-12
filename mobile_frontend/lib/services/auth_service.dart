@@ -2,8 +2,15 @@ import 'package:dio/dio.dart';
 import '../core/api_client.dart'; // Make sure this path is correct in your project
 
 class AuthService {
+<<<<<<< HEAD
+  // ⚠️ CHANGE THIS TO YOUR BACKEND URL
+  // If using Android Emulator: http://10.0.2.2:8000/api/
+  // If using Chrome (web): http://127.0.0.1:8000/api/
+  static const String baseUrl = "http://192.168.0.189:8000/api/v1/accounts/";
+=======
   // Use the ApiClient instance so the JWT token is automatically attached!
   static final Dio _dio = ApiClient.instance.dio;
+>>>>>>> origin/main
 
   // =========================================================
   // REGISTER
@@ -132,17 +139,25 @@ class AuthService {
   // =========================================================
   // UPDATE PROFILE (No token parameter needed anymore!)
   // =========================================================
+  //
+  // Only the fields that are actually supplied are sent. This matters for
+  // `phone`: the backend's User.phone is a required (non-blank) field, so
+  // blindly PATCHing it — or sending an empty string for it — either
+  // forces the user to retype a number they already have on file, or gets
+  // rejected by the serializer. Passing phone: null now means "leave the
+  // stored number alone".
   static Future<Map<String, dynamic>> updateProfile({
-    required String firstName,
-    required String lastName,
-    required String phone,
+    String? firstName,
+    String? lastName,
+    String? phone,
   }) async {
     try {
-      final response = await _dio.patch('/accounts/me/', data: {
-        'first_name': firstName,
-        'last_name': lastName,
-        'phone': phone,
-      });
+      final data = <String, dynamic>{};
+      if (firstName != null) data['first_name'] = firstName;
+      if (lastName != null) data['last_name'] = lastName;
+      if (phone != null && phone.trim().isNotEmpty) data['phone'] = phone.trim();
+
+      final response = await _dio.patch('/accounts/me/', data: data);
       return response.data;
     } on DioException catch (e) {
       throw Exception(_handleDioError(e));

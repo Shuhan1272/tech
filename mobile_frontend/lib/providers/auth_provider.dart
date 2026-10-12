@@ -82,12 +82,27 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Also logs the user in — verify-email returns tokens on success.
+  ///
+  /// FIXED: this used to store the small `user` object embedded in the
+  /// verify-email response, which only contains id/email/first_name/
+  /// last_name/is_email_verified — NO phone. So a freshly registered user
+  /// landed in the app with an incomplete profile, and screens that read
+  /// user['phone'] (Edit Profile) showed a blank phone number. Now that
+  /// the tokens exist we fetch the real profile from /accounts/me/ (which
+  /// returns phone + date_joined); if that call fails for any reason we
+  /// still fall back to the response payload so login isn't blocked.
   Future<bool> verifyEmail({required String email, required String otp}) {
     return _runGuarded(() async {
       final response = await AuthService.verifyEmail(email: email, otp: otp);
       await TokenStorage.saveTokens(access: response['access'], refresh: response['refresh']);
-      _user = Map<String, dynamic>.from(response['user']);
       _isAuthenticated = true;
+      try {
+        _user = await AuthService.getProfile();
+      } catch (_) {
+        if (response['user'] != null) {
+          _user = Map<String, dynamic>.from(response['user']);
+        }
+      }
     });
   }
 
@@ -127,10 +142,14 @@ class AuthProvider extends ChangeNotifier {
     ));
   }
 
+  /// Updates the profile. `phone` is OPTIONAL on purpose: the number is
+  /// already stored on the account, so editing a name must never require
+  /// retyping it. Pass null (the default) to leave the stored number
+  /// untouched.
   Future<bool> updateProfile({
     required String firstName,
     required String lastName,
-    required String phone,
+    String? phone,
   }) {
     return _runGuarded(() async {
       _user = await AuthService.updateProfile(
@@ -139,6 +158,20 @@ class AuthProvider extends ChangeNotifier {
         phone: phone,
       );
     });
+  }
+
+  /// Re-reads the current user from GET /accounts/me/ (first_name,
+  /// last_name, phone, email...). Deliberately does NOT touch isLoading:
+  /// it's a silent background refresh used by screens like Edit Profile,
+  /// so it must not make every submit button in the app spin. Failures
+  /// are ignored — whatever profile is already cached stays on screen.
+  Future<void> refreshProfile() async {
+    try {
+      _user = await AuthService.getProfile();
+      notifyListeners();
+    } catch (_) {
+      // Keep the cached profile; the caller shows its own error state.
+    }
   }
 
   Future<bool> changePassword({
