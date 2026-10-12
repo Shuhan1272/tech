@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../core/snackbar_helper.dart';
@@ -124,8 +125,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     maxLength: 6,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
                     style: const TextStyle(fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.w600),
-                    decoration: const InputDecoration(counterText: '', hintText: '000000'),
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      // Was '000000' — a placeholder made of zeros looks
+                      // like an already-filled value. 'xxxxxx' reads as a
+                      // prompt to type the 6-digit code.
+                      hintText: 'xxxxxx',
+                      hintStyle: TextStyle(
+                        fontSize: 22,
+                        letterSpacing: 8,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFBDBDBD),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   PrimaryButton(label: 'Verify Code', isLoading: _isSubmittingOtp, onPressed: _verifyOtp),

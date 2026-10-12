@@ -227,7 +227,30 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
-                child: Text('Shop by Category', style: Theme.of(context).textTheme.titleLarge),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text('Shop by Category', style: Theme.of(context).textTheme.titleLarge),
+                    // Categories now come from GET /products/categories/.
+                    // If that request fails, the fallback list is still
+                    // drawn (so the screen is never empty) — but the real
+                    // problem is surfaced with a retry instead of being
+                    // hidden behind fake data.
+                    if (productProvider.categoriesError.isNotEmpty &&
+                        !productProvider.hasRemoteCategories)
+                      TextButton(
+                        onPressed: () => productProvider.fetchCategories(),
+                        child: productProvider.isLoadingCategories
+                            ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                            : const Text('Retry'),
+                      ),
+                  ],
+                ),
               ),
             ),
             SliverPadding(

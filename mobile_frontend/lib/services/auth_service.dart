@@ -132,17 +132,25 @@ class AuthService {
   // =========================================================
   // UPDATE PROFILE (No token parameter needed anymore!)
   // =========================================================
+  //
+  // Only the fields that are actually supplied are sent. This matters for
+  // `phone`: the backend's User.phone is a required (non-blank) field, so
+  // blindly PATCHing it — or sending an empty string for it — either
+  // forces the user to retype a number they already have on file, or gets
+  // rejected by the serializer. Passing phone: null now means "leave the
+  // stored number alone".
   static Future<Map<String, dynamic>> updateProfile({
-    required String firstName,
-    required String lastName,
-    required String phone,
+    String? firstName,
+    String? lastName,
+    String? phone,
   }) async {
     try {
-      final response = await _dio.patch('/accounts/me/', data: {
-        'first_name': firstName,
-        'last_name': lastName,
-        'phone': phone,
-      });
+      final data = <String, dynamic>{};
+      if (firstName != null) data['first_name'] = firstName;
+      if (lastName != null) data['last_name'] = lastName;
+      if (phone != null && phone.trim().isNotEmpty) data['phone'] = phone.trim();
+
+      final response = await _dio.patch('/accounts/me/', data: data);
       return response.data;
     } on DioException catch (e) {
       throw Exception(_handleDioError(e));

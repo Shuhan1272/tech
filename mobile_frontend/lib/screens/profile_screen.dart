@@ -60,6 +60,16 @@ class ProfileScreen extends StatelessWidget {
                   user['email'] ?? '',
                   style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 13),
                 ),
+                // The stored mobile number was never displayed anywhere in
+                // the app — it's now shown here too, so it's visible
+                // without opening Edit Profile.
+                if ((user['phone'] ?? '').toString().trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    user['phone'].toString(),
+                    style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 13),
+                  ),
+                ],
               ],
             ),
           ),
