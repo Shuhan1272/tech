@@ -554,7 +554,7 @@ export default function Register() {
 
                         {/* =====================
                             Captcha
-                        ====================== */}
+                        ====================== 
 
                         <div className="h-16 border border-gray-300 bg-gray-50 rounded-md px-4 flex justify-between items-center">
 
@@ -578,6 +578,8 @@ export default function Register() {
                             </span>
 
                         </div>
+
+                        */}
 
 
                         {/* =====================
