@@ -48,7 +48,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     brands = BrandSerializer(
         many=True,
-        read_only=True 
+        read_only=True
     )
     sub_categories = serializers.SerializerMethodField()
 
@@ -58,11 +58,11 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'name',
-            'description', 
-            'filters', 
+            'description',
+            'filters',
             'slug',
             'image',
-            'brands', 
+            'brands',
             'sub_categories',
             'is_active',
             'is_featured',

@@ -1,57 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'core/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
+import 'providers/cart_provider.dart';
+import 'providers/address_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const TechNestApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class TechNestApp extends StatelessWidget {
+  const TechNestApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (context) => AuthProvider()..checkAuthStatus(),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => ProductProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => AuthProvider()..checkAuthStatus()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => AddressProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'TechNest',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        initialRoute: '/',
+        // All styling now comes from one theme file rather than being
+        // redefined per screen.
+        theme: AppTheme.light,
+        home: const AuthGate(),
         routes: {
-          '/': (context) => Consumer<AuthProvider>(
-            builder: (context, authProvider, child) {
-              if (authProvider.isLoading) {
-                return const Scaffold(
-                  body: Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              if (authProvider.isAuthenticated) {
-                return const HomeScreen();
-              } else {
-                return const LoginScreen();
-              }
-            },
-          ),
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
         },
       ),
     );
+  }
+}
+
+/// Decides what the user sees on launch.
+///
+/// This used to live inline as the '/' route's builder, which caused a
+/// subtle problem: after logging in, screens called
+/// pushNamedAndRemoveUntil('/home'), but '/' was ALSO a Consumer that
+/// rebuilt into HomeScreen — so the same screen could be reachable through
+/// two different routes with different stacks underneath. Splitting the
+/// startup gate out from the '/home' route keeps that unambiguous.
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
+    if (auth.isLoading && auth.user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return auth.isAuthenticated ? const HomeScreen() : const LoginScreen();
   }
 }

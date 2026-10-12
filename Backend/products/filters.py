@@ -52,12 +52,17 @@ class CategoryFilter(
             Q(parent__slug=value)
     )
 
+    is_featured = django_filters.BooleanFilter(
+            field_name='is_featured'
+    )
+
     class Meta:
     
             model = Category
     
             fields = [
                 'parent',
+                'is_featured'
             ]
 
 
