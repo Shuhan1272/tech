@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../core/snackbar_helper.dart';
@@ -118,8 +119,31 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   maxLength: 6,
+                  // Digits only: the field is a 6-digit OTP, so non-numeric
+                  // input can never be valid — filtering it here also keeps
+                  // `maxLength: 6` meaning "six digits".
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ],
                   style: const TextStyle(fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.w600),
-                  decoration: const InputDecoration(counterText: '', hintText: '000000'),
+                  decoration: const InputDecoration(
+                    counterText: '',
+                    // Was '000000'. Six zeros read like a value that was
+                    // already filled in, so people tapped Verify without
+                    // typing anything (or thought the app had pre-filled a
+                    // demo code). Six x's read unmistakably as "type the
+                    // code here". hintStyle mirrors the field's own metrics
+                    // (size/letterSpacing) so the placeholder lines up with
+                    // the boxes the real digits will drop into.
+                    hintText: 'xxxxxx',
+                    hintStyle: TextStyle(
+                      fontSize: 22,
+                      letterSpacing: 8,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFBDBDBD),
+                    ),
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'Please enter the code';
                     if (value.length != 6) return 'Code must be 6 digits';
