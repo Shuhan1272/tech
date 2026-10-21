@@ -2,8 +2,16 @@ import 'package:dio/dio.dart';
 import '../core/api_client.dart'; // Make sure this path is correct in your project
 
 class AuthService {
+
+  // ⚠️ CHANGE THIS TO YOUR BACKEND URL
+  // If using Android Emulator: http://10.0.2.2:8000/api/
+  // If using Chrome (web): http://127.0.0.1:8000/api/
+  
+  static const String baseUrl = "http://192.168.0.189:8000/api/v1";
+
   // Use the ApiClient instance so the JWT token is automatically attached!
   static final Dio _dio = ApiClient.instance.dio;
+
 
   // =========================================================
   // REGISTER
