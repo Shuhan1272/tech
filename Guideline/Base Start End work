@@ -16,7 +16,6 @@ WEB-FRONTEND
 
 git switch main
 git pull origin main
-
 git switch your_name
 
 cd Web-Frontend
