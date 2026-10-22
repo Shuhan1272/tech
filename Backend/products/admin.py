@@ -21,6 +21,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "parent",
+        "is_featured",
         "is_active",
         "created_at",
     )
@@ -73,6 +74,7 @@ class ProductImageInline(admin.TabularInline):
 
     fields = (
         "image",
+        "image_url",
         "image_preview",
         "is_primary",
     )

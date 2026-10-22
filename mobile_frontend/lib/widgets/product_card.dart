@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+
 import '../models/product.dart';
 import '../core/app_theme.dart';
 
-/// Fixed the image handling: this used to always request
-/// https://via.placeholder.com/... with the product name baked into the
-/// URL, regardless of whether the product had a real photo. Since
-/// Product.fromJson never parsed an `image` field at all, EVERY product —
-/// even ones with real backend images — rendered as a gray box with text.
-/// Now: the real image when one exists, otherwise a clean local
-/// placeholder (no network call, no dependency on an external service
-/// staying up).
 class ProductCard extends StatelessWidget {
   final Product product;
-  const ProductCard({super.key, required this.product});
+
+  const ProductCard({
+    super.key,
+    required this.product,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,16 +26,22 @@ class ProductCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              AspectRatio(aspectRatio: 1.1, child: ProductImage(product: product)),
+              AspectRatio(
+                aspectRatio: 1.1,
+                child: ProductImageView(product: product),
+              ),
+
               if (product.isOnSale)
                 Positioned(
                   top: 8,
                   left: 8,
                   child: _Badge(
-                    text: '-${product.discountPercentage.toStringAsFixed(0)}%',
+                    text:
+                        '-${product.discountPercentage.toStringAsFixed(0)}%',
                     color: AppTheme.danger,
                   ),
                 ),
+
               if (!product.inStock)
                 Positioned.fill(
                   child: Container(
@@ -46,34 +49,50 @@ class ProductCard extends StatelessWidget {
                     child: const Center(
                       child: Text(
                         'Out of Stock',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
                 ),
             ],
           ),
+
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(10.0),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Text(
                     product.brand,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+
                   const SizedBox(height: 2),
+
                   Text(
                     product.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
+
                   const Spacer(),
+
                   Row(
                     children: [
                       if (product.isOnSale) ...[
@@ -90,6 +109,7 @@ class ProductCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                       ],
+
                       Flexible(
                         child: Text(
                           '\$${product.displayPrice.toStringAsFixed(2)}',
@@ -97,7 +117,9 @@ class ProductCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: product.isOnSale ? AppTheme.danger : AppTheme.primaryDark,
+                            color: product.isOnSale
+                                ? AppTheme.danger
+                                : AppTheme.primaryDark,
                           ),
                         ),
                       ),
@@ -113,21 +135,36 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-/// Shared so product detail and the cart tile render images identically.
-class ProductImage extends StatelessWidget {
+/// Displays the product's primary image from the API.
+class ProductImageView extends StatelessWidget {
   final Product product;
   final BoxFit fit;
-  const ProductImage({super.key, required this.product, this.fit = BoxFit.cover});
+
+  const ProductImageView({
+    super.key,
+    required this.product,
+    this.fit = BoxFit.cover,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (product.image == null || product.image!.isEmpty) return _placeholder();
+    final String? imageUrl = product.imageUrl;
+
+    if (imageUrl == null || imageUrl.trim().isEmpty) {
+      return _placeholder();
+    }
+
     return CachedNetworkImage(
-      imageUrl: product.image!,
+      imageUrl: imageUrl,
       fit: fit,
+      width: double.infinity,
       placeholder: (context, url) => Container(
         color: Colors.grey.shade100,
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        child: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+          ),
+        ),
       ),
       errorWidget: (context, url, error) => _placeholder(),
     );
@@ -135,9 +172,14 @@ class ProductImage extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
+      width: double.infinity,
       color: AppTheme.primary.withOpacity(0.06),
       child: Center(
-        child: Icon(Icons.devices_other_outlined, size: 40, color: AppTheme.primary.withOpacity(0.35)),
+        child: Icon(
+          Icons.devices_other_outlined,
+          size: 40,
+          color: AppTheme.primary.withOpacity(0.35),
+        ),
       ),
     );
   }
@@ -146,14 +188,31 @@ class ProductImage extends StatelessWidget {
 class _Badge extends StatelessWidget {
   final String text;
   final Color color;
-  const _Badge({required this.text, required this.color});
+
+  const _Badge({
+    required this.text,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
