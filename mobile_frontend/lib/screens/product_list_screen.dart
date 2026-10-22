@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
+import '../widgets/empty_state.dart';
 import 'product_detail_screen.dart';
+import 'search_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   final String? initialCategory;
   final String? initialBrand;
 
-  const ProductListScreen({
-    super.key,
-    this.initialCategory,
-    this.initialBrand,
-  });
+  const ProductListScreen({super.key, this.initialCategory, this.initialBrand});
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -22,7 +20,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   final ScrollController _scrollController = ScrollController();
   String? _selectedCategory;
   String? _selectedBrand;
-  String? _searchQuery;
+  String? _ordering;
 
   @override
   void initState() {
@@ -33,267 +31,223 @@ class _ProductListScreenState extends State<ProductListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<ProductProvider>(context, listen: false);
       provider.resetProducts();
-      provider.fetchProducts(
-        category: _selectedCategory,
-        brand: _selectedBrand,
-        refresh: true,
-      );
+      provider.fetchProducts(category: _selectedCategory, brand: _selectedBrand, refresh: true);
+      if (provider.categories.isEmpty) provider.fetchCategories();
     });
 
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 200) {
-        final provider = Provider.of<ProductProvider>(context, listen: false);
-        if (!provider.isLoading && provider.hasMore) {
-          provider.fetchProducts(
-            category: _selectedCategory,
-            brand: _selectedBrand,
-          );
-        }
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final provider = Provider.of<ProductProvider>(context, listen: false);
+      if (!provider.isLoading && provider.hasMore) {
+        provider.fetchProducts(
+          category: _selectedCategory,
+          brand: _selectedBrand,
+          ordering: _ordering,
+        );
       }
-    });
+    }
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _applyFilters({String? category, String? ordering, bool clearCategory = false}) {
+    setState(() {
+      if (clearCategory) {
+        _selectedCategory = null;
+      } else if (category != null) {
+        _selectedCategory = category;
+      }
+      if (ordering != null) _ordering = ordering;
+    });
+    final provider = Provider.of<ProductProvider>(context, listen: false);
+    provider.resetProducts();
+    provider.fetchProducts(
+      category: _selectedCategory,
+      brand: _selectedBrand,
+      ordering: _ordering,
+      refresh: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final productProvider = Provider.of<ProductProvider>(context);
+    final productProvider = context.watch<ProductProvider>();
+    final hasFilters = _selectedCategory != null || _ordering != null;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Products'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black87,
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              _showFilterDialog(context);
-            },
+            icon: const Icon(Icons.search),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
+          ),
+          IconButton(
+            icon: Badge(
+              isLabelVisible: hasFilters,
+              smallSize: 8,
+              child: const Icon(Icons.tune),
+            ),
+            onPressed: () => _showFilterSheet(context, productProvider),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                onSubmitted: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                  final provider = Provider.of<ProductProvider>(context, listen: false);
-                  provider.resetProducts();
-                  provider.fetchProducts(
-                    search: value,
-                    category: _selectedCategory,
-                    brand: _selectedBrand,
-                    refresh: true,
-                  );
-                },
-                decoration: InputDecoration(
-                  hintText: 'Search products...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  fillColor: Colors.white,
-                  filled: true,
-                ),
-              ),
+      body: productProvider.isLoading && productProvider.products.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : productProvider.products.isEmpty
+          ? EmptyState(
+        icon: productProvider.errorMessage.isNotEmpty
+            ? Icons.cloud_off_outlined
+            : Icons.inventory_2_outlined,
+        // Surfacing the actual error instead of always claiming
+        // "No products found" — a failed request and an empty
+        // result set are very different problems, and the old
+        // screen made a connection failure look like an empty
+        // catalog.
+        title: productProvider.errorMessage.isNotEmpty
+            ? 'Could not load products'
+            : 'No products found',
+        subtitle: productProvider.errorMessage.isNotEmpty
+            ? productProvider.errorMessage
+            : 'Try adjusting your filters',
+        actionLabel: productProvider.errorMessage.isNotEmpty
+            ? 'Retry'
+            : (hasFilters ? 'Clear filters' : null),
+        onAction: productProvider.errorMessage.isNotEmpty
+            ? () => _applyFilters(clearCategory: false)
+            : (hasFilters ? () => _applyFilters(clearCategory: true) : null),
+      )
+          : GridView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.60,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+        ),
+        itemCount: productProvider.products.length + (productProvider.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == productProvider.products.length) {
+            return const Center(
+              child: Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator()),
+            );
+          }
+          final product = productProvider.products[index];
+          return GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => ProductDetailScreen(slug: product.slug)),
             ),
-          ),
-          // Product grid
-          Expanded(
-            child: productProvider.isLoading && productProvider.products.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : productProvider.products.isEmpty
-                ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No products found',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    'Try adjusting your filters',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-                : GridView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.65,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              itemCount: productProvider.products.length +
-                  (productProvider.hasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == productProvider.products.length) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-                final product = productProvider.products[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProductDetailScreen(
-                          slug: product.slug,
-                        ),
-                      ),
-                    );
-                  },
-                  child: ProductCard(product: product),
-                );
-              },
-            ),
-          ),
-        ],
+            child: ProductCard(product: product),
+          );
+        },
       ),
     );
   }
 
-  void _showFilterDialog(BuildContext context) {
+  void _showFilterSheet(BuildContext context, ProductProvider productProvider) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Filters',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Category',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: ['All', 'Electronics', 'Accessories', 'Home'].map((category) {
-                  return ChoiceChip(
-                    label: Text(category),
-                    selected: _selectedCategory == category ||
-                        (_selectedCategory == null && category == 'All'),
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = selected && category != 'All' ? category : null;
-                      });
-                      final provider = Provider.of<ProductProvider>(context, listen: false);
-                      provider.resetProducts();
-                      provider.fetchProducts(
-                        category: _selectedCategory,
-                        brand: _selectedBrand,
-                        refresh: true,
-                      );
-                      Navigator.pop(context);
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Sort By',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: ['Newest', 'Price: Low to High', 'Price: High to Low', 'Popular'].map((sort) {
-                  return ChoiceChip(
-                    label: Text(sort),
-                    selected: false,
-                    onSelected: (selected) {
-                      // Handle sort
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              Row(
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
+                  Text('Filters', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 20),
+                  Text('Category', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 10),
+                  // Fixed: this used to be a hardcoded list of
+                  // ['All', 'Electronics', 'Accessories', 'Home'] that had
+                  // nothing to do with the categories the app actually
+                  // fetches (Trimmer, Mini UPS, AC...), so picking one
+                  // would never match any real product. It also passed the
+                  // display NAME as the filter value while the API expects
+                  // a slug. Both fixed: real categories, filtered by slug.
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('All'),
+                        selected: _selectedCategory == null,
+                        onSelected: (_) {
+                          _applyFilters(clearCategory: true);
+                          Navigator.pop(sheetContext);
+                        },
+                      ),
+                      ...productProvider.displayCategories.map((category) {
+                        return ChoiceChip(
+                          label: Text(category.name),
+                          selected: _selectedCategory == category.slug,
+                          onSelected: (_) {
+                            _applyFilters(category: category.slug);
+                            Navigator.pop(sheetContext);
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Sort by', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 10),
+                  // Fixed: the sort chips previously had selected: false
+                  // hardcoded and an empty onSelected with a "// Handle
+                  // sort" comment — they did nothing. These now pass real
+                  // DRF ordering values through to the API.
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _sortChip(sheetContext, 'Newest', '-created_at'),
+                      _sortChip(sheetContext, 'Price: Low to High', 'price'),
+                      _sortChip(sheetContext, 'Price: High to Low', '-price'),
+                      _sortChip(sheetContext, 'Name (A–Z)', 'name'),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
                     child: OutlinedButton(
                       onPressed: () {
-                        setState(() {
-                          _selectedCategory = null;
-                          _selectedBrand = null;
-                        });
-                        final provider = Provider.of<ProductProvider>(context, listen: false);
-                        provider.resetProducts();
-                        provider.fetchProducts(refresh: true);
-                        Navigator.pop(context);
+                        setState(() => _ordering = null);
+                        _applyFilters(clearCategory: true);
+                        Navigator.pop(sheetContext);
                       },
-                      child: const Text('Reset'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Apply'),
+                      child: const Text('Reset Filters'),
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         );
+      },
+    );
+  }
+
+  Widget _sortChip(BuildContext sheetContext, String label, String value) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: _ordering == value,
+      onSelected: (_) {
+        _applyFilters(ordering: value);
+        Navigator.pop(sheetContext);
       },
     );
   }
