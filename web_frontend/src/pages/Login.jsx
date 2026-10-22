@@ -210,7 +210,7 @@ export default function Login() {
 
                         </div>
 
-                        {/* Captcha demo */}
+                        {/* Captcha demo 
                         <div className="h-16 border border-gray-300 bg-gray-50 rounded-md flex items-center justify-between px-4">
 
                             <div className="flex items-center gap-3">
@@ -230,6 +230,7 @@ export default function Login() {
                             </div>
 
                         </div>
+                        /*}
 
                         {/* Submit */}
                         <button

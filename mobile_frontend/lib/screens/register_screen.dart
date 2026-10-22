@@ -98,18 +98,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
+<<<<<<< HEAD
 
     if (!_hasLength || !_hasUppercase || !_hasLowercase || !_hasDigit || !_hasSpecialSymbol) {
       AppSnackbar.showError(context, 'Please meet all password requirements');
       return;
     }
 
+=======
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
     final auth = context.read<AuthProvider>();
     final success = await auth.register(
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
+<<<<<<< HEAD
+=======
+      // Note: no longer .trim()-ing passwords. The old code trimmed them
+      // on register but the backend stores exactly what it receives, so a
+      // password with a leading/trailing space would be saved trimmed here
+      // and then fail to match on a login screen that trimmed differently.
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
       password: _passwordController.text,
       password2: _password2Controller.text,
     );
@@ -119,6 +129,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => VerifyEmailScreen(
+<<<<<<< HEAD
+=======
+            // Carrying the whole form forward (not just the email) so
+            // "Resend OTP" on the next screen can actually re-submit
+            // registration — the backend regenerates a fresh OTP for an
+            // unverified email on a repeat /register/ call. Previously
+            // VerifyEmailScreen only received the email, so its "Resend"
+            // link just showed a fake success SnackBar without calling
+            // anything at all.
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
             email: _emailController.text.trim(),
             phone: _phoneController.text.trim(),
             firstName: _firstNameController.text.trim(),
@@ -133,6 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+<<<<<<< HEAD
   Widget _buildRequirementRow(String text, bool met) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -156,6 +177,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+=======
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -163,6 +186,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Create Account')),
+<<<<<<< HEAD
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -328,6 +352,152 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
           ),
+=======
+      // CENTERING FIX: the form was a plain top-aligned ListView, so on a
+      // tall screen it hugged the AppBar with dead space below. Same
+      // recipe as login_screen: a min-height box lets the column center
+      // itself when there is room, and the scroll view keeps it usable
+      // when the content (or the keyboard) is taller than the viewport.
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final minHeight =
+            constraints.maxHeight > 48 ? constraints.maxHeight - 48 : 0.0;
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: minHeight),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: primary.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.person_add_alt_1_outlined, size: 36, color: primary),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Join TechNest',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Create your account to start shopping',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 24),
+
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _firstNameController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(labelText: 'First Name'),
+                              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _lastNameController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(labelText: 'Last Name'),
+                              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(labelText: 'Phone Number', prefixIcon: Icon(Icons.phone_outlined)),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return 'Please enter your phone number';
+                          if (value.trim().length < 11) return 'Please enter a valid phone number';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return 'Please enter your email';
+                          if (!value.contains('@')) return 'Please enter a valid email';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          helperText: 'At least 8 characters',
+                          suffixIcon: IconButton(
+                            icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Please enter a password';
+                          if (value.length < 8) return 'Password must be at least 8 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _password2Controller,
+                        obscureText: _obscurePassword2,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(_obscurePassword2 ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                            onPressed: () => setState(() => _obscurePassword2 = !_obscurePassword2),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Please confirm your password';
+                          if (value != _passwordController.text) return 'Passwords do not match';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      PrimaryButton(label: 'Register', isLoading: auth.isLoading, onPressed: _submit),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Already have an account?', style: Theme.of(context).textTheme.bodyMedium),
+                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Login')),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
         ),
       ),
     );

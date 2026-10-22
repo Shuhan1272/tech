@@ -141,4 +141,71 @@ class DiscountSerializer(serializers.ModelSerializer):
                     'End date must be after start date.'
             })
 
+<<<<<<< HEAD
         return attrs
+=======
+        return attrs
+
+
+from decimal import Decimal
+from django.utils import timezone
+
+
+
+class DiscountValidationSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=50)
+    order_amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal('0.01')
+    )
+
+    def validate(self, attrs):
+        code = attrs['code'].strip().upper()
+        order_amount = attrs['order_amount']
+
+        try:
+            discount = Discount.objects.get(
+                code=code,
+                discount_type='promo',
+                is_active=True
+            )
+        except Discount.DoesNotExist:
+            raise serializers.ValidationError({
+                'code': 'Invalid or inactive promo code.'
+            })
+
+        
+        now = timezone.now()
+
+        if discount.start_date and now < discount.start_date:
+            raise serializers.ValidationError({
+                'code': 'This promo code is not active yet.'
+            })
+
+        if discount.end_date and now > discount.end_date:
+            raise serializers.ValidationError({
+                'code': 'This promo code has expired.'
+            })
+
+        if (
+            discount.usage_limit is not None
+            and discount.used_count >= discount.usage_limit
+        ):
+            raise serializers.ValidationError({
+                'code': 'This promo code has reached its usage limit.'
+            })
+
+        if order_amount < discount.minimum_order_amount:
+            raise serializers.ValidationError({
+                'order_amount': (
+                    f'Minimum order amount is '
+                    f'{discount.minimum_order_amount}.'
+                )
+            })
+
+        attrs['code'] = code
+        attrs['discount'] = discount
+
+        return attrs
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f

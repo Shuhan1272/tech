@@ -38,7 +38,7 @@ export default function Navbar() {
                         </span>
 
                         <span className="text-blue-400">
-                            NEST
+                            ZONE
                         </span>
                     </Link>
 
