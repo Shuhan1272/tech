@@ -3,6 +3,8 @@ from rest_framework.viewsets import ModelViewSet
 from .models import Discount
 from .serializers import DiscountSerializer
 
+<<<<<<< HEAD
+=======
 from decimal import Decimal
 
 from rest_framework.views import APIView
@@ -12,11 +14,15 @@ from rest_framework import status
 
 from .serializers import DiscountValidationSerializer
 
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
 
 class DiscountViewSet(ModelViewSet):
 
     queryset = Discount.objects.all()
 
+<<<<<<< HEAD
+    serializer_class = DiscountSerializer
+=======
     serializer_class = DiscountSerializer
 
 
@@ -58,3 +64,4 @@ class DiscountValidationView(APIView):
             'discount_amount': str(discount_amount),
             'final_amount': str(final_amount),
         }, status=status.HTTP_200_OK)
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
