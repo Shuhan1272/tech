@@ -3,23 +3,13 @@ BACKEND
 
 git switch main
 git pull origin main
+
 cd Backend
 cd venv\scripts
-activate
+.\activate
 cd..
 cd..
-python manage.py runserver
-
-
-WEB-FRONTEND
-------------
-
-git switch main
-git pull origin main
-git switch your_name
-
-cd Web-Frontend
-npm run dev
+python manage.py runserver 0.0.0.0:8000
 
 
 MOBILE-FRONTEND
@@ -28,11 +18,10 @@ MOBILE-FRONTEND
 git switch main
 git pull origin main
 
-git switch your_name
+git switch your_branch_name
 
-cd Mobile-Frontend
-
--- your mobile-frontend start instruction here --
+cd mobile_frontend
+flutter run
 
 
 [NOTE: AFTER FINISHING YOUR WORK]
