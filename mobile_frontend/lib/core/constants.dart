@@ -10,11 +10,7 @@ class ApiConstants {
   // products app isn't under /api/v1/products/, update the paths below.
   //
   // Android emulator -> maps to your PC's own localhost.
-<<<<<<< HEAD
-  static const String baseUrl = "http://192.168.0.105:8000/api/v1";
-=======
   static const String baseUrl = "http://192.168.0.155:8000/api/v1";
->>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
 
 // Swap to one of these depending on how you're running the app:
 // Chrome / Windows desktop app -> "http://127.0.0.1:8000/api/v1"
