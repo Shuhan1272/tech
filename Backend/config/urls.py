@@ -12,7 +12,10 @@ urlpatterns = [
     path('api/v1/products/', include('products.urls')),
     path('api/v1/core/', include('core.urls')),
     path('api/v1/cart/',include('cart.urls')),
+<<<<<<< HEAD
+=======
     path('api/v1/discounts/', include('discounts.urls')),
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
 ]
 
 if settings.DEBUG:

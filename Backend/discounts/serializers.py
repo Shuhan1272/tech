@@ -141,6 +141,9 @@ class DiscountSerializer(serializers.ModelSerializer):
                     'End date must be after start date.'
             })
 
+<<<<<<< HEAD
+        return attrs
+=======
         return attrs
 
 
@@ -205,3 +208,4 @@ class DiscountValidationSerializer(serializers.Serializer):
         attrs['discount'] = discount
 
         return attrs
+>>>>>>> 89a0b742e33e68f3ed2c4dcf319164e5067a197f
