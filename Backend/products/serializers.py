@@ -27,6 +27,8 @@ class BrandSerializer(serializers.ModelSerializer):
             'name',
             'description',  
             'slug',
+            'image',
+            'image_url',
             'is_active',
             'created_at',
             'updated_at',
@@ -62,6 +64,7 @@ class CategorySerializer(serializers.ModelSerializer):
             'filters',
             'slug',
             'image',
+            'image_url',
             'brands',
             'sub_categories',
             'is_active',
@@ -107,6 +110,7 @@ class ProductImageSerializer(
         fields = [
             'id',
             'image',
+            'image_url',
             'alt_text',
             'is_primary',
             'display_order',
@@ -190,11 +194,15 @@ class ProductListSerializer(serializers.ModelSerializer):
     brand = serializers.StringRelatedField()
     category = serializers.StringRelatedField()
     default_variant = serializers.SerializerMethodField()
+    images = ProductImageSerializer(
+        many=True,
+        read_only=True,
+    )
 
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'slug', 'category', 'brand', 
+            'id', 'name', 'slug', 'category', 'brand','images',
             'key_feature','specification','colors','is_active', 'is_featured',
             'default_variant',
         ]
@@ -217,62 +225,26 @@ class ProductListSerializer(serializers.ModelSerializer):
                 return ProductVariantSerializer(variant, context=self.context).data
                 
         return None
+    def get_primary_image(self, obj):
+        images = obj.images.all()
 
+        # 1. Try to find the primary image
+        for image in images:
+            if image.is_primary:
+                return ProductImageSerializer(
+                    image,
+                    context=self.context
+                ).data
 
-# =========================================================
-# Product Detail Serializer
-# =========================================================
+        # 2. Fallback: Return the first image
+        if images:
+            return ProductImageSerializer(
+                images[0],
+                context=self.context
+            ).data
 
-class ProductSerializer(
-    serializers.ModelSerializer
-):
-
-    category = serializers.StringRelatedField()
-
-    brand = serializers.StringRelatedField()
-
-    variants = ProductVariantSerializer(
-        many=True,
-        read_only=True
-    )
-
-    class Meta:
-
-        model = Product
-
-        fields = [
-            'id',
-            'category',
-            'brand',
-            'name',
-            'slug',
-            'description',
-            'specification',
-            'is_active',
-            'is_featured',
-            'variants',
-            'created_at',
-            'updated_at',
-        ]
-
-        read_only_fields = [
-            'id',
-            'slug',
-            'variants',
-            'created_at',
-            'updated_at',
-        ]
-
-    def validate_name(self, value):
-
-        if not value.strip():
-
-            raise serializers.ValidationError(
-                'Product name cannot be empty.'
-            )
-
-        return value
-
+        # 3. No image available
+        return None
 
 # =========================================================
 # Product Question
@@ -335,3 +307,79 @@ class ProductReviewSerializer(
             'created_at',
             'updated_at',
         ]
+
+
+
+# =========================================================
+# Product Detail Serializer
+# =========================================================
+
+class ProductSerializer(
+    serializers.ModelSerializer
+):
+
+    category = serializers.StringRelatedField()
+
+    brand = serializers.StringRelatedField()
+
+    variants = ProductVariantSerializer(
+        many=True,
+        read_only=True
+    )
+
+    images = ProductImageSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    reviews = ProductReviewSerializer(
+        many=True,
+        read_only=True,
+     )
+
+    questions = ProductQuestionSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta:
+
+        model = Product
+
+        fields = [
+            'id',
+            'category',
+            'brand',
+            'name',
+            'slug',
+            'description',
+            'specification',
+            'images',
+            'reviews',
+            'questions',
+            'is_active',
+            'is_featured',
+            'variants',
+            'created_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'slug',
+            'variants',
+            'created_at',
+            'updated_at',
+        ]
+
+    def validate_name(self, value):
+
+        if not value.strip():
+
+            raise serializers.ValidationError(
+                'Product name cannot be empty.'
+            )
+
+        return value
+
+

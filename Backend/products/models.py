@@ -60,6 +60,12 @@ class Category(TimeStampedModel):
         default='categories/default.jpg'
     )
 
+    image_url = models.URLField(
+          blank=True,
+
+          default=''
+    )
+
     slug = models.SlugField(
         max_length=120,
         unique=True,
@@ -115,6 +121,11 @@ class Brand(TimeStampedModel):
             blank=True, 
             default='brands/default.jpg'
     )
+
+    image_url = models.URLField(
+            blank=True,
+            default=''
+        )
 
     slug = models.SlugField(
         max_length=120,
@@ -360,6 +371,11 @@ class ProductImage(TimeStampedModel):
         upload_to='products/', 
         default='products/default.jpg'
     )
+
+    image_url = models.URLField(
+            blank=True,
+            default=''
+        )
 
     alt_text = models.CharField(
         max_length=200,

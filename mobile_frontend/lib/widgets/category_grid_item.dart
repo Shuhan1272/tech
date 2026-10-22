@@ -1,28 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import '../models/category.dart';
 import '../core/app_theme.dart';
 
-/// Extracted from a private method inside home_screen.dart so it's a
-/// proper reusable widget — the same way CategoryChip already was. The
-/// two were doing near-identical layout work but one lived as a
-/// screen-private method for no real reason.
-///
-/// Updated: the tile used to always draw an emoji, even for real backend
-/// categories (which come with an `image` URL — this backend's
-/// Category.image defaults to categories/default.jpg). It now renders the
-/// API image when one exists and only falls back to the emoji placeholder
-/// for the handful of hardcoded categories.
 class CategoryGridItem extends StatelessWidget {
   final Category category;
   final VoidCallback onTap;
 
-  const CategoryGridItem({super.key, required this.category, required this.onTap});
+  const CategoryGridItem({
+    super.key,
+    required this.category,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = category.image;
-    final hasImage = imageUrl != null && imageUrl.trim().isNotEmpty;
+    final imageUrl = category.image_url ?? category.image ?? '';
+    final hasImage = imageUrl.trim().isNotEmpty;
 
     return GestureDetector(
       onTap: onTap,
@@ -30,37 +25,50 @@ class CategoryGridItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(
+            color: Colors.grey.shade200,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
+              width: 44,
+              height: 44,
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.08), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
               child: hasImage
-                  ? ClipOval(
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => const SizedBox(width: 20, height: 20),
-                  errorWidget: (context, url, error) =>
-                      Text(category.icon, style: const TextStyle(fontSize: 20)),
-                ),
-              )
-                  : Text(category.icon, style: const TextStyle(fontSize: 20)),
+                  ? SvgPicture.network(
+                      imageUrl,
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.contain,
+                      placeholderBuilder: (context) =>
+                          const SizedBox(
+                        width: 28,
+                        height: 28,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
             const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 4,
+              ),
               child: Text(
                 category.name,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textPrimary,
+                ),
               ),
             ),
           ],
